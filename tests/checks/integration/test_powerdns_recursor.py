@@ -9,11 +9,13 @@ from tests.checks.common import AgentCheckTest
 class TestPowerDNSRecursorCheck(AgentCheckTest):
     CHECK_NAME = 'powerdns_recursor'
 
-    GAUGE_METRICS = [
+    GAUGE_METRICS_V3 = [
         'cache-entries',
         'concurrent-queries',
+        'negcache-entries',
+        'packetcache-entries',
     ]
-    RATE_METRICS = [
+    RATE_METRICS_V3 = [
         'all-outqueries',
         'answers-slow',
         'answers0-1',
@@ -22,12 +24,27 @@ class TestPowerDNSRecursorCheck(AgentCheckTest):
         'answers100-1000',
         'cache-hits',
         'cache-misses',
+        'dont-outqueries',
+        'ipv6-outqueries',
+        'ipv6-questions',
         'noerror-answers',
+        'nxdomain-answers',
         'outgoing-timeouts',
+        'over-capacity-drops',
+        'packetcache-hits',
+        'packetcache-misses',
         'questions',
         'servfail-answers',
+        'tcp-client-overflow',
+        'tcp-clients',
         'tcp-outqueries',
         'tcp-questions',
+        'throttle-entries',
+        'throttled-out',
+        'throttled-outqueries',
+        'unauthorized-tcp',
+        'unauthorized-udp',
+        'unexpected-packets',
     ]
 
     METRIC_FORMAT = 'powerdns.recursor.{}'
@@ -38,18 +55,32 @@ class TestPowerDNSRecursorCheck(AgentCheckTest):
             "host": "127.0.0.1",
             "port": "8082",
             "api_key": "pdns_api_key"
+        },
+        {
+            "host": "127.0.0.1",
+            "port": "8082",
+            "api_key": "pdns_api_key",
+            "version": 4
         }]}
 
     # Really a basic check to see if all metrics are there
     def test_check(self):
         self.run_check_twice(self.config)
 
-        # Assert metrics
-        for metric in self.GAUGE_METRICS:
+        # Assert metrics v3
+        for metric in self.GAUGE_METRICS_V3:
             self.assertMetric(self.METRIC_FORMAT.format(metric), tags=[])
 
-        for metric in self.RATE_METRICS:
+        for metric in self.RATE_METRICS_V3:
             self.assertMetric(self.METRIC_FORMAT.format(metric), tags=[])
+
+        # Assert metrics v4
+        for metric in self.GAUGE_METRICS_V4:
+            self.assertMetric(self.METRIC_FORMAT.format(metric), tags=[])
+
+        for metric in self.RATE_METRICS_V4:
+            self.assertMetric(self.METRIC_FORMAT.format(metric), tags=[])
+
 
         service_check_tags = ['recursor_host:127.0.0.1', 'recursor_port:8082']
         self.assertServiceCheckOK('powerdns.recursor.can_connect', tags=service_check_tags)
@@ -62,11 +93,18 @@ class TestPowerDNSRecursorCheck(AgentCheckTest):
         config['instances'][0]['tags'] = ['foo:bar']
         self.run_check_twice(config)
 
-        # Assert metrics
-        for metric in self.GAUGE_METRICS:
+        # Assert metrics v3
+        for metric in self.GAUGE_METRICS_V3:
             self.assertMetric(self.METRIC_FORMAT.format(metric), tags=tags)
 
-        for metric in self.RATE_METRICS:
+        for metric in self.RATE_METRICS_V3:
+            self.assertMetric(self.METRIC_FORMAT.format(metric), tags=tags)
+
+        # Assert metrics v4
+        for metric in self.GAUGE_METRICS_V4:
+            self.assertMetric(self.METRIC_FORMAT.format(metric), tags=tags)
+
+        for metric in self.RATE_METRICS_V4:
             self.assertMetric(self.METRIC_FORMAT.format(metric), tags=tags)
 
         service_check_tags = ['recursor_host:127.0.0.1', 'recursor_port:8082']
