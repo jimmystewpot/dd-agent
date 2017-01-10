@@ -67,9 +67,9 @@ class BrocadeVadcCheck(AgentCheck):
         # type collected.
         for endpoint in self.METRICS_ENDPOINTS:
             if endpoint == 'pools':
-                self._get_pool_stats(stats[endpoint])
+                self._get_pool_stats(stats[endpoint], tags)
             elif endpoint == 'virtual_servers':
-                self._get_virtualserver_stats(stats[endpoint])
+                self._get_virtualserver_stats(stats[endpoint], tags)
 
     def _get_config(self, instance):
         required = ['host', 'port', 'username', 'password']
@@ -96,6 +96,11 @@ class BrocadeVadcCheck(AgentCheck):
 
     def _get_vadc_stats(self, config):
         stats = {}
+        service_check_tags = [
+            'brocade_vadc_host:{}'.format(config.host),
+            'brocade_vadc_port:{}'.format(config.port),
+        ]
+
         try:
             session = requests.Session()
             session.auth(config.username, config.password)
@@ -108,12 +113,7 @@ class BrocadeVadcCheck(AgentCheck):
                                tags=service_check_tags)
             raise
 
-        service_check_tags = [
-            'brocade_vadc_host:{}'.format(config.host),
-            'brocade_vadc_port:{}'.format(config.port),
-        ]
-
-        for METRICS in METRICS_ENDPOINTS:
+        for METRICS in self.METRICS_ENDPOINTS:
             url = "https://{}:{}/{}/{}/".format(config.host, config.port, self.STATS_API, METRICS)
 
             # create a temp dict that we use to roll-up into the stats dict created above.
@@ -135,7 +135,7 @@ class BrocadeVadcCheck(AgentCheck):
                            tags=service_check_tags)
         return stats
 
-    def _get_pool_stats(self, stats):
+    def _get_pool_stats(self, stats, tags):
         for pool_name in stats:
             for name, value in stats[pool_name]['statistics']:
                 if name in BrocadeVadcCheck.POOL_GAUGE:
@@ -143,7 +143,7 @@ class BrocadeVadcCheck(AgentCheck):
                 elif name in BrocadeVadcCheck.POOL_RATE:
                     self.rate('brocade_vadc.pool.{}.{}'.format(pool_name, name), float(value), tags=tags)
 
-    def _get_virtualserver_stats(self, stats):
+    def _get_virtualserver_stats(self, stats, tags):
         for virtual_server in stats:
             for name, value in stats[virtual_server]['statistics']:
                 if name in BrocadeVadcCheck.VIRTUAL_SERVER_GAUGE:
