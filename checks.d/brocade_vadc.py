@@ -115,23 +115,23 @@ class BrocadeVadcCheck(AgentCheck):
 
         for METRICS in self.METRICS_ENDPOINTS:
             url = "https://{}:{}/{}/{}/".format(config.host, config.port, self.STATS_API, METRICS)
-
             # create a temp dict that we use to roll-up into the stats dict created above.
             tmp = {}
             s = session.get(url, verify=config.verify_ssl)
             s.raise_for_status()
+
             for ref in s.json().get("children"):
                 if ref is None:
                     continue
                 else:
-                    print(ref.get("href"))
                     tmp[ref.get("name")] = session.get("https://{}:{}{}".format(config.host,
                                                                                 config.port,
                                                                                 ref.get("href"))).json()
             # roll-up tmp into stats{}
             stats[METRICS] = tmp
 
-        self.service_check(self.SERVICE_CHECK_NAME, AgentCheck.OK,
+        self.service_check(self.SERVICE_CHECK_NAME,
+                           AgentCheck.OK,
                            tags=service_check_tags)
         return stats
 
@@ -139,9 +139,13 @@ class BrocadeVadcCheck(AgentCheck):
         for pool_name in stats:
             for name, value in stats[pool_name]['statistics']:
                 if name in BrocadeVadcCheck.POOL_GAUGE:
-                    self.gauge('brocade_vadc.pool.{}.{}'.format(pool_name, name), float(value), tags=tags)
+                    self.gauge('brocade_vadc.pool.{}.{}'.format(pool_name, name),
+                               float(value),
+                               tags=tags)
                 elif name in BrocadeVadcCheck.POOL_RATE:
-                    self.rate('brocade_vadc.pool.{}.{}'.format(pool_name, name), float(value), tags=tags)
+                    self.rate('brocade_vadc.pool.{}.{}'.format(pool_name, name),
+                              float(value),
+                              tags=tags)
 
     def _get_virtualserver_stats(self, stats, tags):
         for virtual_server in stats:
